@@ -1,0 +1,20 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Bitcount+Prop+Double:wght@100..900&family=Quicksand:wght@300..700&display=swap');
+/* font-family: "Quicksand", sans-serif; */
+
+*{
+    font-family: "Quicksand", sans-serif; 
+}
+@import "tailwindcss";
+
+@theme{
+    --color-primary: #5044E5;
+    --color-secondary: #F2F2F2;
+}
+
+@font-face {
+    font-family: 'BitcountPropDouble';
+    src: url(../public/fonts/BitcountPropDouble-VariableFont_CRSV\,ELSH\,ELXP\,slnt\,wght.ttf) format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}
