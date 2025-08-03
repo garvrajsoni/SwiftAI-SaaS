@@ -1,5 +1,13 @@
-import { Edit, Sparkles } from 'lucide-react'
+import { Copy, Edit, Sparkles } from 'lucide-react'
 import React, {useState } from 'react'
+
+import axios from 'axios';
+import { useAuth } from '@clerk/clerk-react';
+import toast from 'react-hot-toast';
+
+
+axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
+
 
 const WriteArticles = () => {
 
@@ -12,15 +20,43 @@ const WriteArticles = () => {
 
   const [seletedLength, setSelectedLength] = useState(articleLength[0].length);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [content, setcontent] = useState('');
 
-  const handleSubmit = (e) => {
+  const {getToken} = useAuth()
+
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Generating article with topic:', input, 'and length:', seletedLength);
+    try {
+      setLoading(true);
+      const prom = `write an article about ${input} in ${seletedLength.text}`;
+      const { data } = await axios.post('/api/ai/generate-article', { prompt: prom, length: seletedLength.length }, {
+        headers: {
+          'Authorization': `Bearer ${await getToken()}`
+        }
+      });
+
+      if (data.success) {
+        setcontent(data.content);
+        console.log(data.content);
+      }
+      else{
+        toast.error(data.message);
+        console.log(data.message);
+      }
+
+
+    } catch (error) {
+      toast.error("Error generating article:", error);
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
   }
 
-
   return (
-    <div className='h-full overflow-y-scroll p-6 flex justify-center flex-wrap items-start gap-4 text-slate-700'>
+    <div className='h-full p-6 flex justify-center flex-wrap items-start gap-4 text-slate-700'>
       {/* left col */}
       <form  onSubmit={handleSubmit} className='max-w-lg min-h-96 max-h-[600px] p-4 bg-white rounded-1g border border-gray-200'>
         <div className='w-full flex items-center gap-3'>
@@ -41,29 +77,42 @@ const WriteArticles = () => {
 
         <br/>
         
-        <button className='w-full flex justify-center items-center gap-2
-bg-gradient-to-r from-[#226BFF] to-[#65ADFF] text-white px-4 py-2 mt-6 text-sm rounded-1g cursor-pointer' >
+        <button disabled={loading} className={`w-full flex justify-center items-center gap-2
+bg-gradient-to-r from-[#226BFF] to-[#65ADFF] ${loading ? 'opacity-50 cursor-not-allowed' : ''} text-white px-4 py-2 mt-6 text-sm rounded-1g cursor-pointer`} >
           <Edit className='w-5'/>
           Generate article
         </button>
 
 
       </form>
-      {/* Right col */}
-      <div className='w-full max-w-lg p-4 bg-white rounded-lg flex flex-col border border-gray-200 min-h-96 max-h-[600px]'>
-        <div className='flex items-center gap-3'>
-          <Edit className='w-5 h-5 text-[#4A7AFF]' />
-          <h1 className='text-xl font-semibold'>Generated article</h1>
-        </div>
-        <div className='flex-1 flex justify-center items-center'>
-          <div className='text-sm flex flex-col items-center gap-5 text-gray-400'>
-            <Edit className='w-9 h-9' />
-            <p>Enter a topic and click "Generate article" to get started</p>
-          </div>
-        </div>
-      </div>
 
-    </div>
+      {/* Right Column */}
+<div className='relative w-full max-w-lg p-4 bg-white border border-gray-200 min-h-96 max-h-[600px] flex flex-col'>
+  <div className='w-full flex items-center justify-between mb-2'>
+    <h1 className='text-xl font-semibold flex items-center gap-2'>
+      <Edit className='w-5 text-[#4A7AFF]' />
+      Generated Article
+    </h1>
+    {content && (
+      <Copy
+        size={20}
+        className='cursor-pointer hover:text-[#4A7AFF]'
+        onClick={() => {
+          navigator.clipboard.writeText(content);
+          toast.success('Copied to clipboard');
+        }}
+      />
+    )}
+  </div>
+
+
+  <div className='flex-1 overflow-y-auto text-sm text-gray-700 whitespace-pre-line pr-2'>
+    {content ? <ReactMarkdown>{content}</ReactMarkdown> : (
+         <p className='text-gray-400'>Your Generated article will appear here...</p>
+       )}
+  </div>
+</div>
+</div>
   )
 }
 

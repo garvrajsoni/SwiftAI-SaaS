@@ -1,18 +1,53 @@
-import { UploadCloud, FileText, Image, Camera, Sparkles, File, Book } from 'lucide-react';
+import { UploadCloud, FileText, Image, Camera, Sparkles, File, Book, Copy } from 'lucide-react';
 import React, { useState } from 'react';
+import axios from 'axios';
+import FormData from 'form-data';
+import toast from 'react-hot-toast';
+import { useAuth } from '@clerk/clerk-react';
+import ReactMarkdown from 'react-markdown';
+
+axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
+
 
 const ReviewResume = () => {
   const [input, setInput] = useState(null);
+  const {getToken} = useAuth()
+  const [loading, setLoading] = useState(false);
+  const [content, setcontent] = useState('');
 
-  const handleSubmit = (e) => {
+   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!input) {
-      alert("Please upload a resume.");
-      return;
-    }
+    try {
+      setLoading(true);
 
-    console.log('Processing resume:', input);
-  };
+      const formData = new FormData();
+      formData.append('resume', input);
+
+     const { data } = await axios.post('/api/ai/resume-review', formData, {
+      headers: {
+        'Authorization': `Bearer ${await getToken()}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+      if (data.success) {
+        setcontent(data.content);
+    
+      }
+      else{
+        toast.error(data.message);
+        
+      }
+
+
+    } catch (error) {
+      toast.error("Error generating article:", error);
+      
+    } finally {
+      setLoading(false);
+    }
+  }
+
 
   return (
     <div className="min-h-screen w-full bg-[#f8f9fc] px-4 py-10 flex items-start justify-center">
@@ -51,26 +86,42 @@ const ReviewResume = () => {
             )}
           </div>
 
-          <button
-            type="submit"
-            className="w-full bg-gradient-to-r from-teal-500 to-teal-400 hover:opacity-90 text-white font-medium text-sm py-2 rounded-md flex items-center justify-center gap-2 transition"
-          >
-            <FileText className="w-4 h-4" />
-            Review Resume
-          </button>
+           <button disabled={loading} className={`w-full flex justify-center items-center gap-2
+bg-gradient-to-r from-teal-500 to-teal-400 ${loading ? 'opacity-50 cursor-not-allowed' : ''} text-white px-4 py-2 mt-6 text-sm rounded-1g cursor-pointer`} >
+          <Book className='w-5'/>
+          Review Resume
+        </button>
+
         </form>
 
-        {/* Right Panel */}
-        <div className="flex-1 min-h-[300px] bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            <File className="inline-block w-5 h-5 mr-2" /> Analysis Results
-          </h2>
+        
 
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400">
-            <FileText className="w-10 h-10 mb-2" />
-            <p className="text-sm">Upload your resume and click “Review Resume” to get started</p>
-          </div>
-        </div>
+        {/* Right Panel */}
+              <div className='relative w-full max-w-lg p-4 bg-white border border-gray-200 min-h-96 max-h-[600px] flex flex-col'>
+  <div className='w-full flex items-center justify-between mb-2'>
+    <h1 className='text-xl font-semibold flex items-center gap-2'>
+      <FileText className='w-5 text-[#4A7AFF]' />
+      <span>Resume Review</span>
+    </h1>
+    {content && (
+      <Copy
+        size={20}
+        className='cursor-pointer hover:text-[#4A7AFF]'
+        onClick={() => {
+          navigator.clipboard.writeText(content);
+          toast.success('Copied to clipboard');
+        }}
+      />
+    )}
+  </div>
+
+
+  <div className='flex-1 overflow-y-auto text-sm text-gray-700 whitespace-pre-line pr-2'>
+    {content ? <ReactMarkdown>{content}</ReactMarkdown> : (
+      <p className='text-gray-400'>Please upload a resume to get started</p>
+    )}
+  </div>
+</div>
       </div>
     </div>
   );

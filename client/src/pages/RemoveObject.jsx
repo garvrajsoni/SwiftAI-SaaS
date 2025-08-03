@@ -1,20 +1,73 @@
 import React, { useState } from 'react'
-import { Image, Scissors, Sparkle, Sparkles } from 'lucide-react';
+import { Download, Image, Scissors, Sparkle, Sparkles, UploadCloud } from 'lucide-react';
+import { useAuth } from '@clerk/clerk-react';
+import axios from 'axios';  
+import FormData from 'form-data';
+import toast from 'react-hot-toast';
+
+
+axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
 
 const RemoveObject = () => {
+  
   const [input, setInput] = useState(null);
   const [description, setDescription] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [content, setcontent] = useState('');
+  
+  
+  const {getToken} = useAuth();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
 
-    if (!input || !description.trim()) {
-      alert("Please upload an image and enter a description.");
-      return;
-    }
+     const handleDownload = async () => {
+    const imageUrl = content;
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
 
-    console.log("Processing image:", input, "with description:", description);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = "swiftAi-generated-image.jpg";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    window.URL.revokeObjectURL(blobUrl);
   };
+
+    const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('image', input);
+      formData.append('object', description);
+
+     const { data } = await axios.post('/api/ai/remove-image-object', formData,{
+      headers: {
+        'Authorization': `Bearer ${await getToken()}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    console.log("Full response:", data);
+
+      if (data.success) {
+        setcontent(data.content);
+
+      }
+      else{
+        toast.error(data.message);
+      }
+
+
+    } catch (error) {
+      toast.error("Error removing object:", error);
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="min-h-screen w-full flex items-start justify-center bg-[#f8f9fc] px-4 py-10">
@@ -29,18 +82,37 @@ const RemoveObject = () => {
           <h1 className="text-xl font-semibold">AI Object Remover</h1>
         </div>
 
-          <div className="mb-4 mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Upload image
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setInput(e.target.files[0])}
-              className="w-full text-sm border border-gray-300 rounded-md p-2 bg-white"
-              required
-            />
-          </div>
+         <div>
+          <input
+            type="file"
+            id="upload"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => setInput(e.target.files[0])}
+            required
+          />
+          <label
+            htmlFor="upload"
+            className="flex items-center gap-2 justify-center cursor-pointer w-full border border-dashed border-gray-400 p-4 rounded-lg hover:bg-gray-50 transition"
+          >
+            <UploadCloud className="w-6 h-6 text-[#ffc800]" />
+            <span className="text-sm font-medium text-gray-600">
+              Click to upload image
+            </span>
+          </label>
+
+          {input && (
+            <div className="mt-3">
+              <p className="text-xs text-yellow-600">Selected: {input.name}</p>
+              <img
+                accept="image/*"
+                src={URL.createObjectURL(input)}
+                alt="Preview"
+                className="w-40 mt-2 rounded-md border border-gray-300"
+              />
+            </div>
+          )}
+        </div>
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -59,28 +131,33 @@ const RemoveObject = () => {
             </p>
           </div>
 
-          <button
-            type="submit"
-            className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:opacity-90 text-white text-sm font-medium py-2 rounded-md flex items-center justify-center gap-2 transition"
-          >
-            <Scissors className="w-4 h-4" />
-            Remove object
-          </button>
+           <button disabled={loading} className={`w-full flex justify-center items-center gap-2
+                      bg-gradient-to-r from-indigo-500 to-purple-500 ${loading ? 'opacity-50 cursor-not-allowed' : ''} text-white px-4 py-2 mt-6 text-sm rounded-1g cursor-pointer`} >
+                            <Scissors className='w-5'/>
+                            Generate Image
+                    </button>
+       
         </form>
 
         {/* Right Panel */}
-        <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
-         
-            <div className="flex items-center gap-3">
-                      <Scissors className="w-5 h-5 text-indigo-500" />
-                      <h1 className="text-xl font-semibold">Processed Output</h1>
-                    </div>
-
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-gray-400">
-            <Image className="w-10 h-10 mb-2" />
-            <p className="text-sm">Upload an image and describe what to remove</p>
+       <div className='w-full max-w-lg p-4 bg-white rounded-lg flex flex-col border border-gray-200 min-h-96 max-h-[600px]'>
+        <div className='flex items-center gap-3'>
+          <Image className='w-5 h-5 text-[#00AD25]' />
+          <h1 className='text-xl font-semibold'>Processed Image</h1>
+        </div>
+        <div className='flex-1 flex justify-center items-center'>
+          <div className='text-sm flex flex-col items-center gap-5 text-gray-400 p-2'>
+            <Image className={`${content ? 'hidden' : 'block'} w-9 h-9`} />
+              {content && <img src={content} alt="Generated image" className='w-full h-full object-contain' />}
           </div>
         </div>
+        <button className='w-full flex justify-center items-center gap-2 bg-green-500 text-white px-4 py-2 mt-6 text-sm rounded-lg cursor-pointer'
+          onClick={handleDownload}
+        >
+          <Download className='w-5'/>
+          Download
+        </button>
+      </div>
       </div>
     </div>
   );

@@ -1,20 +1,70 @@
-import { Eraser, Image, Scissors, Sparkles, UploadCloud } from 'lucide-react';
+import { Download, Eraser, Image, Scissors, Sparkles, UploadCloud } from 'lucide-react';
 import React, { useState } from 'react';
+import axios from 'axios';
+import { useAuth } from '@clerk/clerk-react';
+import toast from 'react-hot-toast';
+import FormData from 'form-data';
+
+
+axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
+
 
 const RemoveBackground = () => {
   const [input, setInput] = useState(null);
+  const {getToken} = useAuth()
+  const [loading, setLoading] = useState(false);
+  const [content, setcontent] = useState('');
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
 
-    if (!input) {
-      alert("Please upload an image first.");
-      return;
-    }
+   const handleDownload = async () => {
+    const imageUrl = content;
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
 
-    console.log('Removing background from image:', input);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = "swiftAi-generated-image.jpg";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    window.URL.revokeObjectURL(blobUrl);
   };
 
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append('image', input);
+
+     const { data } = await axios.post('/api/ai/remove-image-background', formData, {
+      headers: {
+        'Authorization': `Bearer ${await getToken()}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+      if (data.success) {
+        setcontent(data.content);
+        console.log(data.content);
+      }
+      else{
+        toast.error(data.message);
+        console.log(data.message);
+      }
+
+
+    } catch (error) {
+      toast.error("Error generating article:", error);
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  }
   return (
     <div className="w-full min-h-screen p-6 flex flex-col md:flex-row gap-6 justify-center items-start text-slate-700 bg-gray-50">
       
@@ -62,29 +112,34 @@ const RemoveBackground = () => {
             </div>
           )}
         </div>
-
-        <button
-          type="submit"
-          className="w-full flex justify-center items-center gap-2 bg-gradient-to-r from-[#ffc800] to-[#ffb743] text-white px-4 py-2 mt-4 text-sm rounded-lg hover:scale-[1.01] transition"
-        >
-          <Eraser className="w-5" />
-          Remove Background
-        </button>
+          
+          <button disabled={loading} className={`w-full flex justify-center items-center gap-2
+             bg-gradient-to-r from-[#206f03] to-[#00AD25] ${loading ? 'opacity-50 cursor-not-allowed' : ''} text-white px-4 py-2 mt-6 text-sm rounded-1g cursor-pointer`} >
+                  <Scissors className='w-5'/>
+                  Generate Image
+          </button>
+        
       </form>
+  
 
       {/* Right Column */}
-      <div className="w-full md:w-1/2 p-6 bg-white rounded-xl  border border-gray-200 min-h-96 max-h-[600px]">
-        <div className="flex items-center gap-3">
-          <Image className="w-5 h-5 text-[#ffc800]" />
-          <h1 className="text-xl font-semibold">Processed Output</h1>
+      <div className='w-full max-w-lg p-4 bg-white rounded-lg flex flex-col border border-gray-200 min-h-96 max-h-[600px]'>
+        <div className='flex items-center gap-3'>
+          <Image className='w-5 h-5 text-[#00AD25]' />
+          <h1 className='text-xl font-semibold'>Processed Image</h1>
         </div>
-
-        <div className="flex-1 flex justify-center items-center mt-10">
-          <div className="text-sm flex flex-col items-center gap-5 text-gray-400">
-            <Image className="w-9 h-9" />
-            <p>Upload an image and click "Remove Background" to get started</p>
+        <div className='flex-1 flex justify-center items-center'>
+          <div className='text-sm flex flex-col items-center gap-5 text-gray-400 p-2'>
+            <Image className={`${content ? 'hidden' : 'block'} w-9 h-9`} />
+            <img src={content} alt="Generated image" className='w-full h-full object-contain' />
           </div>
         </div>
+        <button className='w-full flex justify-center items-center gap-2 bg-green-500 text-white px-4 py-2 mt-6 text-sm rounded-lg cursor-pointer'
+          onClick={handleDownload}
+        >
+          <Download className='w-5'/>
+          Download
+        </button>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import {  ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import React, { useState } from 'react';
 import Markdown from 'react-markdown';
 
@@ -8,9 +8,11 @@ const CreationItem = ({ item }) => {
   return (
     <div
       onClick={() => setExpanded(!expanded)}
-      className="p-4 w-full text-sm bg-white border border-gray-200 rounded-lg cursor-pointer transition-all duration-300"
+      className={`${
+        expanded ? 'h-auto' : 'h-20'
+      } flex flex-col justify-between gap-4 overflow-hidden w-full text-sm bg-white border border-gray-200 rounded-lg cursor-pointer transition-all duration-300`}
     >
-      <div className="flex justify-between items-center gap-4">
+      <div className="flex justify-between items-start gap-4 p-4">
         <div>
           <h2 className="font-medium">{item.prompt}</h2>
           <p className="text-gray-500">
@@ -18,17 +20,20 @@ const CreationItem = ({ item }) => {
           </p>
         </div>
 
-
-        <div className='flex items-center gap-2'>
-            <button className="bg-[#EFF6FF] border border-[#BFDBFE] text-[#1E40AF] px-4 py-1 rounded-full">
-          {item.type}
-        </button>
-        {expanded ? <ChevronDown className='scale-[0.7]'/> : <ChevronDown className="transform rotate-180 scale-[0.7]" />}
+        <div className="flex items-center gap-2">
+          <button className="bg-[#EFF6FF] border border-[#BFDBFE] text-[#1E40AF] px-4 py-1 rounded-full">
+            {item.type}
+          </button>
+          <ChevronDown
+            className={`transform scale-[0.7] transition-transform duration-300 ${
+              expanded ? 'rotate-180' : ''
+            }`}
+          />
         </div>
       </div>
 
       {expanded && (
-        <div className="mt-4">
+        <div className="p-4 pt-0">
           {item.type === 'image' ? (
             <img
               src={item.content}
@@ -36,11 +41,10 @@ const CreationItem = ({ item }) => {
               className="w-full h-auto rounded-lg"
             />
           ) : (
-            <Markdown>{item.content}</Markdown>
+            <Markdown>{item.content || '_No content available_'}</Markdown>
           )}
         </div>
-      )
-    }
+      )}
     </div>
   );
 };

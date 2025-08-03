@@ -1,0 +1,86 @@
+import sql from '../configs/db.js';
+
+export const getUserCreations = async (req, res) => {
+  try {
+    const {userId} = req.auth();
+    const {limit, page} = req.query;
+    const offset = (page - 1) * limit;
+    const totalCreations = sql`
+      SELECT COUNT(*) FROM creations 
+      WHERE user_id = ${userId}
+    `;
+
+    const totalPages = Math.ceil((await totalCreations)[0]["COUNT(*)"] / limit);
+
+    const creations = await sql`
+      SELECT * FROM creations 
+      WHERE user_id = ${userId} 
+      ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}
+    `;
+
+    res.json({ success: true, creations, totalPages });
+  } catch (error) {
+    console.error("Error in getUserCreations:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
+export const getPublishedCreations = async (req, res) => {
+  try {
+    const creations = await sql`sql'SELECT * FROM creations WHERE publish = true ORDER BY created_at DESC`;
+
+
+    res.json(
+        { success: true, 
+        creations }
+    );
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
+
+export const toggleLikeCreation = async (req, res) => {
+    try {
+    const {userId} = req.auth();
+    const {id} = req.body
+    const [creation] = await sql `SELECT * FROM creations WHERE id = ${id}`;
+
+    if (!creation) {
+        return res.json({ success: false, message: 'Creation not found'});
+    }
+
+    const currentLikes = creation.likes;
+    const userIdStr = userId.toString();
+    let updatedLikes;
+    let message;
+
+    if (currentLikes.includes(userIdStr)) {
+      updatedLikes = currentLikes.filter((user) => user !== userIdStr);
+      message = 'Creation Unliked';
+    } else {
+      updatedLikes = [...currentLikes, userIdStr];
+      message = 'Creation Liked';
+    }
+    
+    const formattedArray = `{${updatedLikes.join(',')}}`
+    await sql`UPDATE creations SET likes = ${formattedArray}::text[] WHERE id = $${id}`;
+
+    const creations = await sql`sql'SELECT * FROM creations WHERE publish = true ORDER BY created_at DESC`;
+
+
+    res.json(
+        { success: true, 
+        creations }
+    );
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
+
+
+

@@ -1,10 +1,11 @@
 // middleware/auth.js
 import { clerkClient } from '@clerk/clerk-sdk-node';
+import { getAuth } from '@clerk/express';
 
 export const auth = async (req, res, next) => {
     try {
-        const { userId, has } = req.auth;
-        
+        const { userId, has } = getAuth(req);
+
         if (!userId) {
             return res.status(401).json({
                 success: false,
@@ -14,7 +15,7 @@ export const auth = async (req, res, next) => {
 
         // Check if user has premium plan (adjust this based on your Clerk setup)
         // This might be a role or permission depending on how you've configured Clerk
-        const hasPremiumPlan = await has({ role: 'premium' }); // or { permission: 'premium' }
+        const hasPremiumPlan = has({ plan: 'premium' }); 
 
         // Get user data
         const user = await clerkClient.users.getUser(userId);
