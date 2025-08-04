@@ -4,7 +4,7 @@ import React, {useState } from 'react'
 import axios from 'axios';
 import { useAuth } from '@clerk/clerk-react';
 import toast from 'react-hot-toast';
-
+import Markdown from 'react-markdown';
 
 axios.defaults.baseURL = import.meta.env.VITE_BASE_URL;
 
@@ -107,7 +107,7 @@ bg-gradient-to-r from-[#226BFF] to-[#65ADFF] ${loading ? 'opacity-50 cursor-not-
 
 
   <div className='flex-1 overflow-y-auto text-sm text-gray-700 whitespace-pre-line pr-2'>
-    {content ? <ReactMarkdown>{content}</ReactMarkdown> : (
+    {content ? <Markdown>{content}</Markdown> : (
          <p className='text-gray-400'>Your Generated article will appear here...</p>
        )}
   </div>
